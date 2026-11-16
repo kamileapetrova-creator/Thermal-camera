@@ -18,6 +18,9 @@ module uart_dump #(
     input         raw_we,
     input  [13:0] raw_idx,
     input  [15:0] raw_word,
+    input  signed [9:0] off_x,
+    input  signed [9:0] off_y,
+    input         [7:0] scale,
     output        tx
 );
 
@@ -63,16 +66,21 @@ module uart_dump #(
     end
 
     // packet sequencer
-    localparam [2:0]
+    localparam [3:0]
         IDLE  = 3'd0,
         HDR   = 3'd1,
         FETCH = 3'd2,
         HI    = 3'd3,
         LO    = 3'd4,
         SUM_H = 3'd5,
-        SUM_L = 3'd6;
+        SUM_L = 3'd6,
+        X_H   = 4'd7,
+        X_L   = 4'd8,
+        Y_H   = 4'd9,
+        Y_L   = 4'd10,
+        Z     = 4'd11;
 
-    reg [2:0] st     = IDLE;
+    reg [3:0] st     = IDLE;
     reg [2:0] hcnt   = 3'd0;
     reg [2:0] flags  = 3'd0;
     reg [15:0] sum   = 16'd0;
@@ -142,7 +150,37 @@ module uart_dump #(
                 tx_data  <= sum[7:0];
                 tx_valid <= 1'b1;
                 sending  <= 1'b0;
-                st       <= IDLE;
+                st       <= X_H;
+            end
+
+                        X_H: if (tx_ready) begin
+                tx_data  <= {{6{off_x[9]}}, off_x[9:8]};   
+                tx_valid <= 1'b1;
+                st       <= X_L;
+            end
+
+            X_L: if (tx_ready) begin
+                tx_data  <= off_x[7:0];                    
+                tx_valid <= 1'b1;
+                st       <= Y_H;
+            end
+
+            Y_H: if (tx_ready) begin
+                tx_data  <= {{6{off_y[9]}}, off_y[9:8]};
+                tx_valid <= 1'b1;
+                st       <= Y_L;
+            end
+
+            Y_L: if (tx_ready) begin
+                tx_data  <= off_y[7:0];
+                tx_valid <= 1'b1;
+                st       <= Z;
+            end
+
+            Z: if (tx_ready) begin
+                tx_data  <= scale;                        
+                tx_valid <= 1'b1;
+                st       <= IDLE;                          
             end
 
             default: st <= IDLE;

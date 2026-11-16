@@ -20,6 +20,10 @@ module fusion_cal #(
     input                   btnL,
     input                   btnR,
     input                   cal_alt,
+    input                   set_x,
+    input                   set_y,
+    input                   set_z,
+    input            [15:0] value,
     output reg signed [9:0] off_x = OFF_X_INIT,
     output reg signed [9:0] off_y = OFF_Y_INIT,
     output reg        [7:0] scale = SCALE_INIT,
@@ -49,6 +53,12 @@ module fusion_cal #(
             off_y <= OFF_Y_INIT;
             scale <= SCALE_INIT;
             thr   <= THR_INIT;
+        end else if (set_x) begin
+            off_x <= value[9:0];
+        end else if (set_y) begin
+            off_y <= value[9:0];
+        end else if (set_z) begin
+            scale <= value[7:0];
         end else if (step) begin
             if (!cal_alt) begin
                 // The offset is added to the read address, so the image moves the other way

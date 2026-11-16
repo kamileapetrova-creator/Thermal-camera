@@ -57,6 +57,7 @@ module top_fusion (
     output [6:0]  seg,
     output        dp,
     output [3:0]  an,
+    input        uart_rx,
     output        uart_tx,
 
     output        hsync,
@@ -109,6 +110,31 @@ module top_fusion (
     reg [1:0] btn_sync = 2'b00;
     always @(posedge clk) btn_sync <= {btn_sync[0], btnC};
     wire reset = btn_sync[1];
+
+    // ---- PC -> FPGA ----
+    wire [7:0] rx_data;
+    wire       rx_valid;
+
+    uart_rx #(.baud_rate(921600)) pc_rx (
+        .clk(clk),
+        .reset(reset),
+        .rx(uart_rx),
+        .data(rx_data),
+        .valid(rx_valid)
+    );
+
+    wire        set_x, set_y, set_z;
+    wire [15:0] cmd_value;
+
+    uart_cmd pc_cmd (
+        .clk(clk),
+        .rx_data(rx_data),
+        .rx_valid(rx_valid),
+        .set_x(set_x),
+        .set_y(set_y),
+        .set_z(set_z),
+        .value(cmd_value)
+    );
 
     // ---- Thermal capture ----
 
@@ -307,6 +333,10 @@ module top_fusion (
         .btnL(btnL),
         .btnR(btnR),
         .cal_alt(sw[8]),
+        .set_x(set_x),
+        .set_y(set_y),
+        .set_z(set_z),
+        .value(cmd_value),
         .off_x(off_x),
         .off_y(off_y),
         .scale(opt_scale),
@@ -415,6 +445,9 @@ module top_fusion (
         .raw_we(raw_we),
         .raw_idx(raw_idx),
         .raw_word(raw_word),
+        .off_x(off_x),
+        .off_y(off_y),
+        .scale(opt_scale),
         .tx(uart_tx)
     );
 
